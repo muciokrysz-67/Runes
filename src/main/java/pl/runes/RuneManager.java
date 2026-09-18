@@ -1,8 +1,7 @@
 package pl.runes;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
+import net.md_5.bungee.api.chat.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -67,7 +66,6 @@ public class RuneManager {
     }
 
     public void startTasks() {
-        // passives + "only one rune type" enforcement, once per second
         Bukkit.getScheduler().runTaskTimer(plugin, this::tickPassives, 20L, 20L);
     }
 
@@ -86,24 +84,24 @@ public class RuneManager {
         return plugin.getConfig().getInt("runes." + t.name() + ".cooldown", t.defaultCooldown);
     }
 
+    private void bar(Player p, String msg) {
+        p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
+    }
+
     // ------------------------------------------------------------------ items
 
     public ItemStack createRune(RuneType type, int amount) {
         ItemStack item = new ItemStack(materials.get(type), amount);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(type.displayName, NamedTextColor.GOLD)
-                .decoration(TextDecoration.ITALIC, false));
-        List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("(" + type.subtitle + ")", NamedTextColor.DARK_GRAY)
-                .decoration(TextDecoration.ITALIC, false));
+        meta.setDisplayName(ChatColor.GOLD + type.displayName);
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.DARK_GRAY + "(" + type.subtitle + ")");
         for (String line : type.description) {
-            lore.add(Component.text(line, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
+            lore.add(ChatColor.GRAY + line);
         }
-        lore.add(Component.text("Cooldown: " + cooldownSeconds(type) + "s", NamedTextColor.YELLOW)
-                .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("PPM aby użyć • tylko jeden typ runy naraz", NamedTextColor.DARK_GRAY)
-                .decoration(TextDecoration.ITALIC, false));
-        meta.lore(lore);
+        lore.add(ChatColor.YELLOW + "Cooldown: " + cooldownSeconds(type) + "s");
+        lore.add(ChatColor.DARK_GRAY + "PPM aby uzyc - tylko jeden typ runy naraz");
+        meta.setLore(lore);
         meta.setEnchantmentGlintOverride(true);
         meta.getPersistentDataContainer().set(runeKey, PersistentDataType.STRING, type.name());
         item.setItemMeta(meta);
@@ -116,15 +114,10 @@ public class RuneManager {
         return RuneType.fromString(v);
     }
 
-    /** Type of rune the player currently owns (null if none), after enforcing the single-type rule. */
     public RuneType currentRune(Player p) {
         return enforceSingle(p);
     }
 
-    /**
-     * Keeps only ONE rune type in the inventory. The type the player already had stays;
-     * runes of any other type get dropped (with a long pickup delay).
-     */
     private RuneType enforceSingle(Player p) {
         UUID id = p.getUniqueId();
         ItemStack[] contents = p.getInventory().getContents();
@@ -156,7 +149,7 @@ public class RuneManager {
             }
         }
         if (dropped) {
-            p.sendActionBar(Component.text("Możesz mieć tylko jeden typ runy naraz!", NamedTextColor.RED));
+            bar(p, ChatColor.RED + "Mozesz miec tylko jeden typ runy naraz!");
         }
         return chosen;
     }
@@ -216,7 +209,7 @@ public class RuneManager {
 
     public void onJoin(Player p) {
         AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
-        if (a != null) removeModifier(a, breakKey); // debuff timer does not survive relogs
+        if (a != null) removeModifier(a, breakKey);
     }
 
     public void onQuit(Player p) {
@@ -281,7 +274,7 @@ public class RuneManager {
         Long until = cd.get(t);
         if (until != null && until > now) {
             long left = (until - now + 999) / 1000;
-            p.sendActionBar(Component.text(t.displayName + " - cooldown: " + left + "s", NamedTextColor.RED));
+            bar(p, ChatColor.RED + t.displayName + " - cooldown: " + left + "s");
             return;
         }
 
@@ -300,7 +293,7 @@ public class RuneManager {
 
         if (ok) {
             cd.put(t, now + cooldownSeconds(t) * 1000L);
-            p.sendActionBar(Component.text(t.displayName + " aktywowana!", NamedTextColor.GOLD));
+            bar(p, ChatColor.GOLD + t.displayName + " aktywowana!");
         }
     }
 
@@ -473,7 +466,7 @@ public class RuneManager {
             }
         }
         if (candidates.isEmpty()) {
-            p.sendActionBar(Component.text("Brak graczy w zasięgu.", NamedTextColor.RED));
+            bar(p, ChatColor.RED + "Brak graczy w zasiegu.");
             return false;
         }
         Player target = candidates.get(new Random().nextInt(candidates.size()));
@@ -482,7 +475,7 @@ public class RuneManager {
         target.setFreezeTicks(target.getMaxFreezeTicks());
         target.getWorld().spawnParticle(Particle.SNOWFLAKE, target.getLocation().add(0, 1, 0), 40, 0.5, 1, 0.5, 0.02);
         target.getWorld().playSound(target.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
-        target.sendActionBar(Component.text("Zostałeś zamrożony!", NamedTextColor.AQUA));
+        bar(target, ChatColor.AQUA + "Zostales zamrozony!");
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             frozen.remove(tid);
             Player t = Bukkit.getPlayer(tid);
@@ -527,7 +520,7 @@ public class RuneManager {
         UUID vid = lastHit.get(p.getUniqueId());
         Entity ent = vid == null ? null : Bukkit.getEntity(vid);
         if (!(ent instanceof LivingEntity victim) || victim.isDead()) {
-            p.sendActionBar(Component.text("Brak ostatnio trafionego celu.", NamedTextColor.RED));
+            bar(p, ChatColor.RED + "Brak ostatnio trafionego celu.");
             return false;
         }
         AttributeInstance a = victim.getAttribute(Attribute.MAX_HEALTH);
@@ -549,7 +542,7 @@ public class RuneManager {
         victim.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR, victim.getLocation().add(0, 1.5, 0), 15, 0.4, 0.4, 0.4);
         victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_WITHER_HURT, 0.8f, 1.2f);
         if (victim instanceof Player vp) {
-            vp.sendActionBar(Component.text("Twoje serca zostały złamane!", NamedTextColor.DARK_RED));
+            bar(vp, ChatColor.DARK_RED + "Twoje serca zostaly zlamane!");
         }
         return true;
     }
@@ -579,7 +572,7 @@ public class RuneManager {
                     Block b = w.getBlockAt(c.getBlockX() + x, by, c.getBlockZ() + z);
                     if (protectedBlocks.contains(b)) continue;
                     if (b.getType() == Material.BEDROCK) continue;
-                    if (b.getState(false) instanceof TileState) continue; // never destroy chests etc.
+                    if (b.getState() instanceof TileState) continue; // never destroy chests etc.
                     saved.put(b, b.getBlockData());
                     b.setType(Material.SCULK, false);
                 }
@@ -596,7 +589,7 @@ public class RuneManager {
     }
 
     private void restoreCage(Map<Block, BlockData> saved) {
-        if (!cages.remove(saved)) return; // already restored
+        if (!cages.remove(saved)) return;
         protectedBlocks.removeAll(saved.keySet());
         for (Map.Entry<Block, BlockData> e : saved.entrySet()) {
             e.getKey().setBlockData(e.getValue(), false);
