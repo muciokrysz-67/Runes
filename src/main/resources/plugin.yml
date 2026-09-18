@@ -6,8 +6,6 @@ description: Custom pottery-sherd runes with unique abilities. Only one rune typ
 commands:
   rune:
     description: Rune administration
-    usage: /rune <give|list|reload>
-    permission: runes.admin
 permissions:
   runes.admin:
     default: op
