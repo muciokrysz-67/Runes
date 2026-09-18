@@ -1,6 +1,6 @@
 package pl.runes;
 
-import net.md_5.bungee.api.chat.ChatMessageType;
+import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
