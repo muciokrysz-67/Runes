@@ -1,0 +1,57 @@
+# Cooldowny w sekundach, materiał = wygląd runy (dowolny pottery sherd).
+# Explosion Rune nie miała cooldownu w konspekcie - domyślnie 30s, zmień jak chcesz.
+# Frost Rune nie miała wybranego sherda ("?") - domyślnie SNORT_POTTERY_SHERD.
+runes:
+  BREEZE:     { cooldown: 40,  material: BREEZE_POTTERY_SHERD }
+  FLAME:      { cooldown: 50,  material: BURN_POTTERY_SHERD }
+  EXPLOSION:  { cooldown: 30,  material: DANGER_POTTERY_SHERD }
+  WIND:       { cooldown: 50,  material: FLOW_POTTERY_SHERD }
+  FROST:      { cooldown: 120, material: SNORT_POTTERY_SHERD }
+  BLADE:      { cooldown: 80,  material: BLADE_POTTERY_SHERD }
+  MINER:      { cooldown: 60,  material: MINER_POTTERY_SHERD }
+  HEART:      { cooldown: 67,  material: HEART_POTTERY_SHERD }
+  HEARTBREAK: { cooldown: 120, material: HEARTBREAK_POTTERY_SHERD }
+  ANCIENT:    { cooldown: 360, material: MOURNER_POTTERY_SHERD }
+
+breeze:
+  dash-distance: 20
+  base-damage: 2.0
+  damage-per-block: 0.4      # dodatkowe obrażenia za każdy przelecony blok do momentu trafienia
+
+flame:
+  duration-seconds: 10
+  radius: 10
+
+explosion:
+  damage: 8.0                # 4 serca
+  radius: 4.0
+  speed: 1.2
+
+wind:
+  height: 40
+  landing-radius: 5.0
+  landing-damage-multiplier: 0.5   # obrażenia = (wysokość upadku - 3) * mnożnik
+
+frost:
+  radius: 15
+  duration-seconds: 3
+
+blade:
+  strength-level: 3
+  duration-seconds: 15
+
+miner:
+  ability-haste-level: 3
+  duration-seconds: 30
+
+heart:
+  resistance-level: 3
+  duration-seconds: 10
+
+heartbreak:
+  hearts-removed: 2
+  duration-seconds: 30
+
+ancient:
+  radius: 16
+  duration-seconds: 30       # po tym czasie klatka znika i teren wraca
