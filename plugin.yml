@@ -1,0 +1,13 @@
+name: PotteryRunes
+version: '${project.version}'
+main: pl.runes.RunePlugin
+api-version: '1.21'
+description: Custom pottery-sherd runes with unique abilities. Only one rune type per player.
+commands:
+  rune:
+    description: Rune administration
+    usage: /rune <give|list|reload>
+    permission: runes.admin
+permissions:
+  runes.admin:
+    default: op
