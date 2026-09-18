@@ -1,8 +1,7 @@
 package pl.runes;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -25,32 +24,32 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!sender.hasPermission("runes.admin")) {
-            sender.sendMessage(Component.text("Brak uprawnień.", NamedTextColor.RED));
+            sender.sendMessage(ChatColor.RED + "Brak uprawnien.");
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage(Component.text("/rune <give|list|reload>", NamedTextColor.YELLOW));
+            sender.sendMessage(ChatColor.YELLOW + "/rune <give|list|reload>");
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "list" -> {
                 for (RuneType t : RuneType.values()) {
-                    sender.sendMessage(Component.text(t.name() + " - " + t.displayName
-                            + " (cooldown " + manager.cooldownSeconds(t) + "s)", NamedTextColor.GOLD));
+                    sender.sendMessage(ChatColor.GOLD + t.name() + " - " + t.displayName
+                            + " (cooldown " + manager.cooldownSeconds(t) + "s)");
                 }
             }
             case "reload" -> {
                 manager.reload();
-                sender.sendMessage(Component.text("Przeładowano config.", NamedTextColor.GREEN));
+                sender.sendMessage(ChatColor.GREEN + "Przeladowano config.");
             }
             case "give" -> {
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("/rune give <typ> [gracz] [ilość]", NamedTextColor.YELLOW));
+                    sender.sendMessage(ChatColor.YELLOW + "/rune give <typ> [gracz] [ilosc]");
                     return true;
                 }
                 RuneType type = RuneType.fromString(args[1]);
                 if (type == null) {
-                    sender.sendMessage(Component.text("Nieznany typ runy. Użyj /rune list", NamedTextColor.RED));
+                    sender.sendMessage(ChatColor.RED + "Nieznany typ runy. Uzyj /rune list");
                     return true;
                 }
                 Player target;
@@ -60,7 +59,7 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
                     target = sender instanceof Player p ? p : null;
                 }
                 if (target == null) {
-                    sender.sendMessage(Component.text("Nie znaleziono gracza.", NamedTextColor.RED));
+                    sender.sendMessage(ChatColor.RED + "Nie znaleziono gracza.");
                     return true;
                 }
                 int amount = 1;
@@ -70,12 +69,13 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
                     } catch (NumberFormatException ignored) {
                     }
                 }
-                target.getInventory().addItem(manager.createRune(type, amount))
-                        .values().forEach(left -> target.getWorld().dropItem(target.getLocation(), left));
-                sender.sendMessage(Component.text("Dano " + type.displayName + " x" + amount
-                        + " graczowi " + target.getName(), NamedTextColor.GREEN));
+                final Player receiver = target;
+                receiver.getInventory().addItem(manager.createRune(type, amount))
+                        .values().forEach(left -> receiver.getWorld().dropItem(receiver.getLocation(), left));
+                sender.sendMessage(ChatColor.GREEN + "Dano " + type.displayName + " x" + amount
+                        + " graczowi " + receiver.getName());
             }
-            default -> sender.sendMessage(Component.text("/rune <give|list|reload>", NamedTextColor.YELLOW));
+            default -> sender.sendMessage(ChatColor.YELLOW + "/rune <give|list|reload>");
         }
         return true;
     }
