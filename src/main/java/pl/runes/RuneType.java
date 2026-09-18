@@ -5,7 +5,7 @@ import org.bukkit.Material;
 import java.util.Locale;
 
 public enum RuneType {
-    BREEZE("Breeze Rune", "Guster", Material.BREEZE_POTTERY_SHERD, 40,
+    BREEZE("Breeze Rune", "Guster", Material.GUSTER_POTTERY_SHERD, 40,
             "Dash 20 bloków. Im dalej wlecisz w przeciwnika, tym większe obrażenia."),
     FLAME("Flame Rune", "Burn", Material.BURN_POTTERY_SHERD, 50,
             "Pasywnie: Fire Resistance (w Netherze także Resistance 1).",
