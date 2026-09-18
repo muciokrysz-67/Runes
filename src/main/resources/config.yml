@@ -23,14 +23,14 @@ flame:
   radius: 10
 
 explosion:
-  damage: 8.0                # 4 serca
+  damage: 6.0                # 3 serca, true damage
   radius: 4.0
   speed: 1.2
 
 wind:
   height: 40
   landing-radius: 5.0
-  landing-damage-multiplier: 0.5   # obrażenia = (wysokość upadku - 3) * mnożnik
+  damage: 6.0                # 3 serca, true damage
 
 frost:
   radius: 15
