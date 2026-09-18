@@ -290,9 +290,9 @@ public class RuneManager {
             case HEARTBREAK -> heartbreak(p);
             case ANCIENT -> ancient(p);
         };
-
         if (ok) {
             cd.put(t, now + cooldownSeconds(t) * 1000L);
+            p.setCooldown(materials.get(t), cooldownSeconds(t) * 20);
             bar(p, ChatColor.GOLD + t.displayName + " aktywowana!");
         }
     }
