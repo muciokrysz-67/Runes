@@ -130,6 +130,14 @@ public class RuneManager {
         resetCrafted(t);
         Bukkit.broadcastMessage(ChatColor.GOLD + t.displayName + ChatColor.YELLOW
                 + " zostala zniszczona! Mozna ja stworzyc na nowo.");
+        broadcastSound(Sound.ENTITY_WITHER_DEATH, 1f);
+    }
+
+    /** Plays a sound to every online player (heard everywhere, not just near a location). */
+    public void broadcastSound(Sound sound, float pitch) {
+        for (Player pl : Bukkit.getOnlinePlayers()) {
+            pl.playSound(pl.getLocation(), sound, 1f, pitch);
+        }
     }
 
     public void markCrafted(RuneType t) {
