@@ -80,6 +80,14 @@ public class RuneManager {
         }
     }
 
+
+
+    public void resetCooldowns(Player p) {
+        cooldowns.remove(p.getUniqueId());
+        for (RuneType t : RuneType.values()) {
+            p.setCooldown(materials.get(t), 0);
+        }
+    }
     public int cooldownSeconds(RuneType t) {
         return plugin.getConfig().getInt("runes." + t.name() + ".cooldown", t.defaultCooldown);
     }
