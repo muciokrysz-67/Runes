@@ -80,14 +80,13 @@ public class RuneManager {
         }
     }
 
-
-
     public void resetCooldowns(Player p) {
         cooldowns.remove(p.getUniqueId());
         for (RuneType t : RuneType.values()) {
             p.setCooldown(materials.get(t), 0);
         }
     }
+
     public int cooldownSeconds(RuneType t) {
         return plugin.getConfig().getInt("runes." + t.name() + ".cooldown", t.defaultCooldown);
     }
@@ -108,7 +107,7 @@ public class RuneManager {
             lore.add(ChatColor.GRAY + line);
         }
         lore.add(ChatColor.YELLOW + "Cooldown: " + cooldownSeconds(type) + "s");
-        lore.add(ChatColor.DARK_GRAY + "PPM aby uzyc - tylko jeden typ runy naraz");
+        lore.add(ChatColor.DARK_GRAY + "PPM aby uzyc");
         meta.setLore(lore);
         meta.setEnchantmentGlintOverride(true);
         meta.getPersistentDataContainer().set(runeKey, PersistentDataType.STRING, type.name());
@@ -122,33 +121,41 @@ public class RuneManager {
         return RuneType.fromString(v);
     }
 
-    public RuneType currentRune(Player p) {
-        return enforceSingle(p);
+    public Set<RuneType> currentRunes(Player p) {
+        return enforceLimit(p);
     }
 
-    private RuneType enforceSingle(Player p) {
+    /** Keeps at most max-rune-types different rune types in the inventory, drops the rest. */
+    private Set<RuneType> enforceLimit(Player p) {
         UUID id = p.getUniqueId();
+        int max = Math.max(1, plugin.getConfig().getInt("max-rune-types", 3));
         ItemStack[] contents = p.getInventory().getContents();
-        RuneType keep = activeRune.get(id);
-        RuneType first = null;
-        boolean keepPresent = false;
+
+        Set<RuneType> previous = activeRunes.getOrDefault(id, new LinkedHashSet<>());
+        Set<RuneType> present = new LinkedHashSet<>();
         for (ItemStack it : contents) {
             RuneType t = getRune(it);
-            if (t == null) continue;
-            if (first == null) first = t;
-            if (t == keep) keepPresent = true;
+            if (t != null) present.add(t);
         }
-        if (first == null) {
-            activeRune.remove(id);
-            return null;
+
+        Set<RuneType> chosen = new LinkedHashSet<>();
+        for (RuneType t : previous) {
+            if (present.contains(t) && chosen.size() < max) chosen.add(t);
         }
-        RuneType chosen = keepPresent ? keep : first;
-        activeRune.put(id, chosen);
+        for (RuneType t : present) {
+            if (chosen.size() < max) chosen.add(t);
+        }
+
+        if (chosen.isEmpty()) {
+            activeRunes.remove(id);
+            return chosen;
+        }
+        activeRunes.put(id, chosen);
 
         boolean dropped = false;
         for (int i = 0; i < contents.length; i++) {
             RuneType t = getRune(contents[i]);
-            if (t != null && t != chosen) {
+            if (t != null && !chosen.contains(t)) {
                 ItemStack stack = contents[i];
                 p.getInventory().setItem(i, null);
                 Item item = p.getWorld().dropItem(p.getLocation(), stack);
@@ -157,7 +164,7 @@ public class RuneManager {
             }
         }
         if (dropped) {
-            bar(p, ChatColor.RED + "Mozesz miec tylko jeden typ runy naraz!");
+            bar(p, ChatColor.RED + "Mozesz miec maksymalnie " + max + " rodzaje run naraz!");
         }
         return chosen;
     }
@@ -165,29 +172,26 @@ public class RuneManager {
     public boolean canPickup(Player p, ItemStack stack) {
         RuneType incoming = getRune(stack);
         if (incoming == null) return true;
-        RuneType cur = enforceSingle(p);
-        return cur == null || cur == incoming;
+        Set<RuneType> cur = enforceLimit(p);
+        int max = Math.max(1, plugin.getConfig().getInt("max-rune-types", 3));
+        return cur.contains(incoming) || cur.size() < max;
     }
 
     // --------------------------------------------------------------- passives
 
     private void tickPassives() {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            RuneType t = enforceSingle(p);
-            if (t != null) {
-                switch (t) {
-                    case FLAME -> {
-                        passive(p, PotionEffectType.FIRE_RESISTANCE, 0);
-                        if (p.getWorld().getEnvironment() == World.Environment.NETHER) {
-                            passive(p, PotionEffectType.RESISTANCE, 0);
-                        }
-                    }
-                    case MINER -> passive(p, PotionEffectType.HASTE, 0);
-                    default -> {
-                    }
+            Set<RuneType> owned = enforceLimit(p);
+            if (owned.contains(RuneType.FLAME)) {
+                passive(p, PotionEffectType.FIRE_RESISTANCE, 0);
+                if (p.getWorld().getEnvironment() == World.Environment.NETHER) {
+                    passive(p, PotionEffectType.RESISTANCE, 0);
                 }
             }
-            setHealthBonus(p, t == RuneType.HEART || t == RuneType.HEARTBREAK);
+            if (owned.contains(RuneType.MINER)) {
+                passive(p, PotionEffectType.HASTE, 0);
+            }
+            setHealthBonus(p, owned.contains(RuneType.HEART) || owned.contains(RuneType.HEARTBREAK));
         }
     }
 
@@ -223,7 +227,7 @@ public class RuneManager {
     public void onQuit(Player p) {
         UUID id = p.getUniqueId();
         lastHit.remove(id);
-        activeRune.remove(id);
+        activeRunes.remove(id);
         frozen.remove(id);
     }
 
@@ -243,11 +247,13 @@ public class RuneManager {
         return true;
     }
 
+    /** No fall damage during Wind slam, and passively while holding Wind or Breeze rune. */
     public boolean hasNoFall(Player p) {
         if (noFall.contains(p.getUniqueId())) return true;
         Set<RuneType> owned = activeRunes.get(p.getUniqueId());
         return owned != null && (owned.contains(RuneType.WIND) || owned.contains(RuneType.BREEZE));
     }
+
     public boolean isProtected(Block b) {
         return protectedBlocks.contains(b);
     }
@@ -256,9 +262,20 @@ public class RuneManager {
         return e.getPersistentDataContainer().has(fireballKey, PersistentDataType.BYTE);
     }
 
+    // True damage: ignores armor and enchantments
+    private void trueDamage(LivingEntity target, double amount, Player source) {
+        if (target.isDead()) return;
+        if (target instanceof Player pl
+                && (pl.getGameMode() == GameMode.CREATIVE || pl.getGameMode() == GameMode.SPECTATOR)) return;
+        if (source != null) target.damage(0.01, source);
+        else target.damage(0.01);
+        if (target.isDead()) return;
+        target.setHealth(Math.max(0.0, target.getHealth() - amount));
+    }
+
     public void explodeFireball(Fireball fb) {
         double radius = plugin.getConfig().getDouble("explosion.radius", 4.0);
-        double damage = plugin.getConfig().getDouble("explosion.damage", 8.0);
+        double damage = plugin.getConfig().getDouble("explosion.damage", 6.0);
         Location l = fb.getLocation();
         World w = l.getWorld();
         Player shooter = fb.getShooter() instanceof Player p ? p : null;
@@ -266,8 +283,7 @@ public class RuneManager {
         w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, 4f, 1f);
         for (Entity e : w.getNearbyEntities(l, radius, radius, radius)) {
             if (e instanceof LivingEntity le && !le.equals(shooter)) {
-                if (shooter != null) le.damage(damage, shooter);
-                else le.damage(damage);
+                trueDamage(le, damage, shooter);
             }
         }
     }
@@ -276,7 +292,7 @@ public class RuneManager {
 
     public void use(Player p, RuneType t) {
         UUID id = p.getUniqueId();
-        if (enforceSingle(p) != t) return;
+        if (!enforceLimit(p).contains(t)) return;
 
         long now = System.currentTimeMillis();
         Map<RuneType, Long> cd = cooldowns.computeIfAbsent(id, k -> new EnumMap<>(RuneType.class));
@@ -299,6 +315,7 @@ public class RuneManager {
             case HEARTBREAK -> heartbreak(p);
             case ANCIENT -> ancient(p);
         };
+
         if (ok) {
             cd.put(t, now + cooldownSeconds(t) * 1000L);
             p.setCooldown(materials.get(t), cooldownSeconds(t) * 20);
@@ -386,7 +403,7 @@ public class RuneManager {
         return true;
     }
 
-    // Explosion: buffed fireball (4 hearts by default)
+    // Explosion: buffed fireball
     private boolean explosion(Player p) {
         double speed = plugin.getConfig().getDouble("explosion.speed", 1.2);
         LargeFireball fb = p.launchProjectile(LargeFireball.class, p.getEyeLocation().getDirection().multiply(speed));
@@ -398,13 +415,12 @@ public class RuneManager {
         return true;
     }
 
-    // Wind: launch up ~40 blocks, slam down, fall damage to everyone around (the caster takes none)
+    // Wind: launch up ~40 blocks, slam down, true damage to everyone around
     private boolean wind(Player p) {
         UUID id = p.getUniqueId();
         if (noFall.contains(id)) return false;
         double height = plugin.getConfig().getDouble("wind.height", 40);
         double radius = plugin.getConfig().getDouble("wind.landing-radius", 5.0);
-        double mult = plugin.getConfig().getDouble("wind.landing-damage-multiplier", 0.5);
         double startY = p.getLocation().getY();
         noFall.add(id);
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_BREEZE_WIND_BURST, 1f, 0.8f);
@@ -448,11 +464,10 @@ public class RuneManager {
             }
 
             private void land() {
-                double fall = Math.max(0, peak - p.getLocation().getY());
-                double dmg = Math.max(0, fall - 3) * mult;
+                double dmg = plugin.getConfig().getDouble("wind.damage", 6.0);
                 Location l = p.getLocation();
                 for (Entity e : p.getNearbyEntities(radius, radius, radius)) {
-                    if (e instanceof LivingEntity le && dmg > 0) le.damage(dmg, p);
+                    if (e instanceof LivingEntity le) trueDamage(le, dmg, p);
                 }
                 l.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, l, 1);
                 l.getWorld().playSound(l, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
