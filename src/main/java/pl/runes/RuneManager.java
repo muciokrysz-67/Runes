@@ -11,8 +11,11 @@ import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.entity.*;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
@@ -21,6 +24,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public class RuneManager {
@@ -40,6 +45,9 @@ public class RuneManager {
     private final Map<UUID, BukkitTask> heartbreakTasks = new HashMap<>();
     private final List<Map<Block, BlockData>> cages = new ArrayList<>();
     private final Set<Block> protectedBlocks = new HashSet<>();
+    private final Set<RuneType> crafted = EnumSet.noneOf(RuneType.class);
+    private final List<NamespacedKey> recipeKeys = new ArrayList<>();
+    private File craftedFile;
 
     public RuneManager(RunePlugin plugin) {
         this.plugin = plugin;
@@ -48,6 +56,7 @@ public class RuneManager {
         this.breakKey = new NamespacedKey(plugin, "rune_heartbreak");
         this.fireballKey = new NamespacedKey(plugin, "rune_fireball");
         loadMaterials();
+        loadCrafted();
     }
 
     // ------------------------------------------------------------------ setup
@@ -55,6 +64,7 @@ public class RuneManager {
     public void reload() {
         plugin.reloadConfig();
         loadMaterials();
+        registerRecipes();
     }
 
     private void loadMaterials() {
@@ -66,10 +76,13 @@ public class RuneManager {
     }
 
     public void startTasks() {
+        registerRecipes();
         Bukkit.getScheduler().runTaskTimer(plugin, this::tickPassives, 20L, 20L);
     }
 
     public void shutdown() {
+        unregisterRecipes();
+        saveCrafted();
         for (Map<Block, BlockData> cage : new ArrayList<>(cages)) restoreCage(cage);
         for (UUID id : new ArrayList<>(heartbreakTasks.keySet())) {
             Entity e = Bukkit.getEntity(id);
@@ -93,6 +106,119 @@ public class RuneManager {
 
     private void bar(Player p, String msg) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
+    }
+
+
+    // ---------------------------------------------------------------- crafting
+
+    /** When true, every rune type can be crafted only once on the whole server. */
+    public boolean craftingLimited() {
+        return plugin.getConfig().getBoolean("crafting.only-one-per-rune", true);
+    }
+
+    public boolean isCrafted(RuneType t) {
+        return crafted.contains(t);
+    }
+
+    public Set<RuneType> craftedRunes() {
+        return new LinkedHashSet<>(crafted);
+    }
+
+    /** Called when a rune item is really destroyed - allows crafting it again. */
+    public void runeDestroyed(RuneType t) {
+        if (!craftingLimited() || !isCrafted(t)) return;
+        resetCrafted(t);
+        Bukkit.broadcastMessage(ChatColor.GOLD + t.displayName + ChatColor.YELLOW
+                + " zostala zniszczona! Mozna ja stworzyc na nowo.");
+    }
+
+    public void markCrafted(RuneType t) {
+        crafted.add(t);
+        saveCrafted();
+    }
+
+    public void resetCrafted(RuneType t) {
+        crafted.remove(t);
+        saveCrafted();
+    }
+
+    public void resetAllCrafted() {
+        crafted.clear();
+        saveCrafted();
+    }
+
+    private void loadCrafted() {
+        craftedFile = new File(plugin.getDataFolder(), "crafted.yml");
+        crafted.clear();
+        if (!craftedFile.exists()) return;
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(craftedFile);
+        for (String s : y.getStringList("crafted")) {
+            RuneType t = RuneType.fromString(s);
+            if (t != null) crafted.add(t);
+        }
+    }
+
+    private void saveCrafted() {
+        YamlConfiguration y = new YamlConfiguration();
+        List<String> list = new ArrayList<>();
+        for (RuneType t : crafted) list.add(t.name());
+        y.set("crafted", list);
+        try {
+            plugin.getDataFolder().mkdirs();
+            y.save(craftedFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Nie udalo sie zapisac crafted.yml: " + e.getMessage());
+        }
+    }
+
+    private void unregisterRecipes() {
+        for (NamespacedKey key : recipeKeys) Bukkit.removeRecipe(key);
+        recipeKeys.clear();
+    }
+
+    private void registerRecipes() {
+        unregisterRecipes();
+        if (!plugin.getConfig().getBoolean("crafting.enabled", true)) return;
+
+        for (RuneType t : RuneType.values()) {
+            ConfigurationSection sec = plugin.getConfig().getConfigurationSection("crafting.recipes." + t.name());
+            if (sec == null) continue;
+            List<String> shape = sec.getStringList("shape");
+            ConfigurationSection ing = sec.getConfigurationSection("ingredients");
+            if (shape.size() != 3 || ing == null) {
+                plugin.getLogger().warning("Receptura " + t.name() + ": potrzebne 3 wiersze 'shape' i sekcja 'ingredients'.");
+                continue;
+            }
+            boolean ok = true;
+            Set<Character> letters = new LinkedHashSet<>();
+            for (String row : shape) {
+                if (row.length() != 3) ok = false;
+                for (char c : row.toCharArray()) if (c != ' ') letters.add(c);
+            }
+            if (!ok) {
+                plugin.getLogger().warning("Receptura " + t.name() + ": kazdy wiersz 'shape' musi miec 3 znaki.");
+                continue;
+            }
+
+            NamespacedKey key = new NamespacedKey(plugin, "rune_" + t.name().toLowerCase(Locale.ROOT));
+            ShapedRecipe recipe = new ShapedRecipe(key, createRune(t, 1));
+            recipe.shape(shape.toArray(new String[0]));
+            for (char c : letters) {
+                String matName = ing.getString(String.valueOf(c));
+                Material m = matName == null ? null : Material.matchMaterial(matName);
+                if (m == null) {
+                    plugin.getLogger().warning("Receptura " + t.name() + ": nieznany skladnik '" + c + "' = " + matName
+                            + " - receptura pominieta. Popraw config.yml.");
+                    ok = false;
+                    break;
+                }
+                recipe.setIngredient(c, m);
+            }
+            if (ok) {
+                Bukkit.addRecipe(recipe);
+                recipeKeys.add(key);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ items
