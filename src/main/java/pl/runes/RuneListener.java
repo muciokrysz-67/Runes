@@ -3,10 +3,13 @@ package pl.runes;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Allay;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Fireball;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -25,6 +28,9 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.EntityRemoveEvent;
+import org.bukkit.event.entity.ItemDespawnEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.ClickType;
@@ -45,6 +51,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BundleMeta;
+import org.bukkit.util.Vector;
 
 public class RuneListener implements Listener {
 
@@ -220,6 +227,52 @@ public class RuneListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onArmorStand(PlayerArmorStandManipulateEvent e) {
         if (isRune(e.getPlayerItem())) e.setCancelled(true);
+    }
+
+    // ------------------------------------------------ runes cannot be destroyed
+
+    // dropped runes are invulnerable (fire, lava, cactus, explosions...)
+    @EventHandler(ignoreCancelled = true)
+    public void onItemSpawn(ItemSpawnEvent e) {
+        if (isRune(e.getEntity().getItemStack())) {
+            e.getEntity().setInvulnerable(true);
+        }
+    }
+
+    @EventHandler
+    public void onItemDamage(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Item item) || !isRune(item.getItemStack())) return;
+        e.setCancelled(true);
+        if (e.getCause() == EntityDamageEvent.DamageCause.VOID) {
+            rescueFromVoid(item);
+        }
+    }
+
+    // dropped runes never despawn
+    @EventHandler
+    public void onItemDespawn(ItemDespawnEvent e) {
+        if (isRune(e.getEntity().getItemStack())) e.setCancelled(true);
+    }
+
+    private void rescueFromVoid(Item item) {
+        World w = Bukkit.getWorlds().get(0);
+        Location spawn = w.getSpawnLocation();
+        Block top = w.getHighestBlockAt(spawn);
+        item.teleport(top.getLocation().add(0.5, 1.5, 0.5));
+        item.setVelocity(new Vector(0, 0, 0));
+    }
+
+    // if a rune item is destroyed anyway (/kill, void, ...), the rune can be crafted again
+    @EventHandler
+    public void onRuneRemoved(EntityRemoveEvent e) {
+        if (!(e.getEntity() instanceof Item item)) return;
+        RuneType t = manager.getRune(item.getItemStack());
+        if (t == null) return;
+        String cause = e.getCause().name();
+        if (cause.equals("DEATH") || cause.equals("DESPAWN") || cause.equals("EXPLODE")
+                || cause.equals("OUT_OF_WORLD")) {
+            manager.runeDestroyed(t);
+        }
     }
 
     // ------------------------------------------------------------- abilities
