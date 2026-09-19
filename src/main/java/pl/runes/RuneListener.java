@@ -69,13 +69,14 @@ public class RuneListener implements Listener {
     }
 
     // Wind rune: no fall damage for the caster during the slam
-    @EventHandler(ignoreCancelled = true)
+      @EventHandler(ignoreCancelled = true)
     public void onFall(EntityDamageEvent e) {
         if (e.getCause() == EntityDamageEvent.DamageCause.FALL
                 && e.getEntity() instanceof Player p && manager.hasNoFall(p)) {
             e.setCancelled(true);
         }
     }
+
 
     // HeartBreak rune tracks the last entity hit
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
