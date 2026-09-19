@@ -42,6 +42,20 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
                 manager.reload();
                 sender.sendMessage(ChatColor.GREEN + "Przeladowano config.");
             }
+            case "resetcd" -> {
+                Player target;
+                if (args.length >= 2) {
+                    target = Bukkit.getPlayerExact(args[1]);
+                } else {
+                    target = sender instanceof Player p ? p : null;
+                }
+                if (target == null) {
+                    sender.sendMessage(ChatColor.RED + "Nie znaleziono gracza.");
+                    return true;
+                }
+                manager.resetCooldowns(target);
+                sender.sendMessage(ChatColor.GREEN + "Zresetowano cooldowny graczowi " + target.getName());
+            }
             case "give" -> {
                 if (args.length < 2) {
                     sender.sendMessage(ChatColor.YELLOW + "/rune give <typ> [gracz] [ilosc]");
