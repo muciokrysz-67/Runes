@@ -236,9 +236,10 @@ public class RuneManager {
     }
 
     public boolean hasNoFall(Player p) {
-        return noFall.contains(p.getUniqueId());
+        if (noFall.contains(p.getUniqueId())) return true;
+        Set<RuneType> owned = activeRunes.get(p.getUniqueId());
+        return owned != null && (owned.contains(RuneType.WIND) || owned.contains(RuneType.BREEZE));
     }
-
     public boolean isProtected(Block b) {
         return protectedBlocks.contains(b);
     }
