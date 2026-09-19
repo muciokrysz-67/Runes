@@ -55,7 +55,7 @@ heartbreak:
   duration-seconds: 30
 
 ancient:
-  radius: 16
+  radius: 10
   duration-seconds: 30       # po tym czasie klatka znika i teren wraca
 
 # ---------------------------------------------------------------------------
