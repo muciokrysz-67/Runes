@@ -15,7 +15,7 @@ import java.util.Locale;
 
 public class RuneCommand implements CommandExecutor, TabCompleter {
 
-    private static final String USAGE = "/rune <give|list|reload|resetcd>";
+    private static final String USAGE = "/rune <give|list|reload|resetcd|status|resetcrafted>";
 
     private final RuneManager manager;
 
@@ -25,15 +25,18 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!sender.hasPermission("runes.admin")) {
-            sender.sendMessage(ChatColor.RED + "Brak uprawnien.");
-            return true;
-        }
+        boolean admin = sender.hasPermission("runes.admin");
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + USAGE);
+            sender.sendMessage(ChatColor.YELLOW + (admin ? USAGE : "/rune status"));
             return true;
         }
-        switch (args[0].toLowerCase(Locale.ROOT)) {
+        String sub = args[0].toLowerCase(Locale.ROOT);
+        // everyone may use /rune status, everything else is admin-only
+        if (!admin && !sub.equals("status")) {
+            sender.sendMessage(ChatColor.RED + "Brak uprawnien. Dostepna komenda: /rune status");
+            return true;
+        }
+        switch (sub) {
             case "list" -> {
                 for (RuneType t : RuneType.values()) {
                     sender.sendMessage(ChatColor.GOLD + t.name() + " - " + t.displayName
@@ -43,6 +46,51 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
             case "reload" -> {
                 manager.reload();
                 sender.sendMessage(ChatColor.GREEN + "Przeladowano config.");
+            }
+            case "status", "crafted" -> {
+                sender.sendMessage(ChatColor.GOLD + "=== Status run ===");
+                for (RuneType t : RuneType.values()) {
+                    if (!manager.isCrafted(t)) {
+                        sender.sendMessage(ChatColor.GREEN + "[wolna] " + ChatColor.GOLD + t.displayName
+                                + ChatColor.GRAY + " - jeszcze nie stworzona");
+                        continue;
+                    }
+                    String crafter = manager.crafterOf(t);
+                    List<String> holders = manager.holdersOf(t);
+                    List<String> ground = manager.groundLocationsOf(t);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(ChatColor.RED).append("[stworzona] ").append(ChatColor.GOLD).append(t.displayName);
+                    sb.append(ChatColor.GRAY).append(" - stworzyl: ").append(ChatColor.YELLOW)
+                            .append(crafter != null ? crafter : "?");
+                    sb.append(ChatColor.GRAY).append(" | ma: ").append(ChatColor.YELLOW);
+                    if (!holders.isEmpty()) {
+                        sb.append(String.join(", ", holders));
+                    } else if (!ground.isEmpty()) {
+                        sb.append("na ziemi");
+                        if (admin) sb.append(" (").append(String.join("; ", ground)).append(")");
+                    } else {
+                        sb.append("nieznane (gracz offline lub poza zaladowanym terenem)");
+                    }
+                    sender.sendMessage(sb.toString());
+                }
+            }
+            case "resetcrafted" -> {
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.YELLOW + "/rune resetcrafted <typ|all>");
+                    return true;
+                }
+                if (args[1].equalsIgnoreCase("all")) {
+                    manager.resetAllCrafted();
+                    sender.sendMessage(ChatColor.GREEN + "Wszystkie runy mozna znow stworzyc.");
+                } else {
+                    RuneType type = RuneType.fromString(args[1]);
+                    if (type == null) {
+                        sender.sendMessage(ChatColor.RED + "Nieznany typ runy. Uzyj /rune list");
+                        return true;
+                    }
+                    manager.resetCrafted(type);
+                    sender.sendMessage(ChatColor.GREEN + type.displayName + " mozna znow stworzyc.");
+                }
             }
             case "resetcd" -> {
                 Player target;
@@ -99,8 +147,15 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
         List<String> out = new ArrayList<>();
+        if (!sender.hasPermission("runes.admin")) {
+            if (args.length == 1) out.add("status");
+            return out;
+        }
         if (args.length == 1) {
-            out.addAll(List.of("give", "list", "reload", "resetcd"));
+            out.addAll(List.of("give", "list", "reload", "resetcd", "status", "resetcrafted"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("resetcrafted")) {
+            out.add("all");
+            Arrays.stream(RuneType.values()).forEach(t -> out.add(t.name()));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("resetcd")) {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
