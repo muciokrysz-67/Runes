@@ -1,11 +1,12 @@
-max-rune-types: 2
+max-rune-types: 3
+
 # Cooldowny w sekundach, materiał = wygląd runy (dowolny pottery sherd).
 # Explosion Rune nie miała cooldownu w konspekcie - domyślnie 30s, zmień jak chcesz.
 # Frost Rune nie miała wybranego sherda ("?") - domyślnie SNORT_POTTERY_SHERD.
 runes:
   BREEZE:     { cooldown: 40,  material: GUSTER_POTTERY_SHERD }
   FLAME:      { cooldown: 50,  material: BURN_POTTERY_SHERD }
-  EXPLOSION:  { cooldown: 50,  material: DANGER_POTTERY_SHERD }
+  EXPLOSION:  { cooldown: 30,  material: DANGER_POTTERY_SHERD }
   WIND:       { cooldown: 50,  material: FLOW_POTTERY_SHERD }
   FROST:      { cooldown: 120, material: SNORT_POTTERY_SHERD }
   BLADE:      { cooldown: 80,  material: BLADE_POTTERY_SHERD }
