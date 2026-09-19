@@ -57,3 +57,97 @@ heartbreak:
 ancient:
   radius: 16
   duration-seconds: 30       # po tym czasie klatka znika i teren wraca
+
+# ---------------------------------------------------------------------------
+# Receptury. Wiersze shape = 3 znaki, litery odpowiadaja skladnikom z 'ingredients'.
+# Nazwy skladnikow to nazwy materialow Minecrafta (np. BLUE_ICE, ENDER_EYE).
+# Jesli skladnik jest zle wpisany, plugin pisze ostrzezenie w konsoli i pomija recepture.
+# Po zmianie: /rune reload
+# ---------------------------------------------------------------------------
+crafting:
+  enabled: true
+  only-one-per-rune: true    # kazda runa moze byc stworzona tylko RAZ na serwerze
+  recipes:
+    BREEZE:
+      shape: ["ABA", "CDC", "EFE"]
+      ingredients:
+        A: WEATHERED_COPPER
+        B: HEAVY_CORE
+        C: BREEZE_ROD
+        D: GUSTER_BANNER_PATTERN
+        E: OMINOUS_TRIAL_KEY
+        F: TRIAL_KEY
+    FLAME:
+      shape: ["ABA", "CDC", "AEA"]
+      ingredients:
+        A: RIB_ARMOR_TRIM_SMITHING_TEMPLATE
+        B: WITHER_SKELETON_SKULL
+        C: BLAZE_POWDER
+        D: MUSIC_DISC_PIGSTEP
+        E: ENDER_EYE
+    EXPLOSION:
+      shape: ["ABA", "CDC", "AEA"]
+      ingredients:
+        A: FIREWORK_ROCKET
+        B: END_CRYSTAL
+        C: TNT
+        D: RESPAWN_ANCHOR
+        E: FIRE_CHARGE
+    WIND:
+      shape: ["ABA", "CDC", "EFE"]
+      ingredients:
+        A: FLOW_BANNER_PATTERN
+        B: HEAVY_CORE
+        C: BREEZE_ROD
+        D: MUSIC_DISC_CAT
+        E: FLOW_ARMOR_TRIM_SMITHING_TEMPLATE
+        F: COPPER_GOLEM_STATUE
+    FROST:
+      shape: ["ABA", "CDC", "AEA"]
+      ingredients:
+        A: BLUE_ICE
+        B: DIAMOND_BLOCK
+        C: POWDER_SNOW_BUCKET
+        D: ENDER_EYE
+        E: COBWEB
+    BLADE:
+      shape: ["ABA", "CDC", "ABA"]
+      ingredients:
+        A: DIAMOND_BLOCK
+        B: WITHER_SKELETON_SKULL
+        C: BLAZE_ROD
+        D: DIAMOND_SWORD
+    MINER:
+      shape: ["ABC", "DED", "FGH"]
+      ingredients:
+        A: ANCIENT_DEBRIS
+        B: MUSIC_DISC_RELIC
+        C: EMERALD_ORE
+        D: ENCHANTED_GOLDEN_APPLE
+        E: DIAMOND_PICKAXE
+        F: DEEPSLATE_DIAMOND_ORE
+        G: BLAST_FURNACE
+        H: RAW_IRON_BLOCK
+    HEART:
+      shape: ["ABA", "CDC", "ABA"]
+      ingredients:
+        A: ENCHANTED_GOLDEN_APPLE
+        B: GLISTERING_MELON_SLICE
+        C: REDSTONE_BLOCK
+        D: GOLDEN_APPLE
+    HEARTBREAK:
+      shape: ["ABA", "CDC", "EBE"]
+      ingredients:
+        A: RED_GLAZED_TERRACOTTA
+        B: ENCHANTED_GOLDEN_APPLE
+        C: GLISTERING_MELON_SLICE
+        D: MOJANG_BANNER_PATTERN
+        E: BLACK_GLAZED_TERRACOTTA
+    ANCIENT:
+      shape: ["ABA", "CDE", "ABA"]
+      ingredients:
+        A: SCULK_CATALYST
+        B: ENCHANTED_GOLDEN_APPLE
+        C: RECOVERY_COMPASS
+        D: WARD_ARMOR_TRIM_SMITHING_TEMPLATE
+        E: MUSIC_DISC_5
