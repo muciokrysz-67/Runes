@@ -15,6 +15,8 @@ import java.util.Locale;
 
 public class RuneCommand implements CommandExecutor, TabCompleter {
 
+    private static final String USAGE = "/rune <give|list|reload|resetcd>";
+
     private final RuneManager manager;
 
     public RuneCommand(RuneManager manager) {
@@ -28,7 +30,7 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "/rune <give|list|reload>");
+            sender.sendMessage(ChatColor.YELLOW + USAGE);
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
@@ -89,7 +91,7 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.GREEN + "Dano " + type.displayName + " x" + amount
                         + " graczowi " + receiver.getName());
             }
-            default -> sender.sendMessage(ChatColor.YELLOW + "/rune <give|list|reload>");
+            default -> sender.sendMessage(ChatColor.YELLOW + USAGE);
         }
         return true;
     }
@@ -98,7 +100,9 @@ public class RuneCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            out.addAll(List.of("give", "list", "reload"));
+            out.addAll(List.of("give", "list", "reload", "resetcd"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("resetcd")) {
+            Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
             Arrays.stream(RuneType.values()).forEach(t -> out.add(t.name()));
         } else if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
