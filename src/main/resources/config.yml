@@ -1,4 +1,4 @@
-max-rune-types: 3
+max-rune-types: 2
 
 # Cooldowny w sekundach, materiał = wygląd runy (dowolny pottery sherd).
 # Explosion Rune nie miała cooldownu w konspekcie - domyślnie 30s, zmień jak chcesz.
