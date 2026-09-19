@@ -46,6 +46,7 @@ public class RuneManager {
     private final List<Map<Block, BlockData>> cages = new ArrayList<>();
     private final Set<Block> protectedBlocks = new HashSet<>();
     private final Set<RuneType> crafted = EnumSet.noneOf(RuneType.class);
+    private final Map<RuneType, String> crafters = new EnumMap<>(RuneType.class);
     private final List<NamespacedKey> recipeKeys = new ArrayList<>();
     private File craftedFile;
 
@@ -141,28 +142,76 @@ public class RuneManager {
     }
 
     public void markCrafted(RuneType t) {
+        markCrafted(t, null);
+    }
+
+    public void markCrafted(RuneType t, String crafterName) {
         crafted.add(t);
+        if (crafterName != null) crafters.put(t, crafterName);
         saveCrafted();
+    }
+
+    public String crafterOf(RuneType t) {
+        return crafters.get(t);
+    }
+
+    /** Names of online players who currently carry this rune. */
+    public List<String> holdersOf(RuneType t) {
+        List<String> names = new ArrayList<>();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            for (ItemStack it : p.getInventory().getContents()) {
+                if (getRune(it) == t) {
+                    names.add(p.getName());
+                    break;
+                }
+            }
+        }
+        return names;
+    }
+
+    /** Locations of this rune lying on the ground in loaded chunks. */
+    public List<String> groundLocationsOf(RuneType t) {
+        List<String> out = new ArrayList<>();
+        for (World w : Bukkit.getWorlds()) {
+            for (Item item : w.getEntitiesByClass(Item.class)) {
+                if (getRune(item.getItemStack()) == t) {
+                    Location l = item.getLocation();
+                    out.add(w.getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ());
+                }
+            }
+        }
+        return out;
     }
 
     public void resetCrafted(RuneType t) {
         crafted.remove(t);
+        crafters.remove(t);
         saveCrafted();
     }
 
     public void resetAllCrafted() {
         crafted.clear();
+        crafters.clear();
         saveCrafted();
     }
 
     private void loadCrafted() {
         craftedFile = new File(plugin.getDataFolder(), "crafted.yml");
         crafted.clear();
+        crafters.clear();
         if (!craftedFile.exists()) return;
         YamlConfiguration y = YamlConfiguration.loadConfiguration(craftedFile);
         for (String s : y.getStringList("crafted")) {
             RuneType t = RuneType.fromString(s);
             if (t != null) crafted.add(t);
+        }
+        ConfigurationSection cs = y.getConfigurationSection("crafters");
+        if (cs != null) {
+            for (String key : cs.getKeys(false)) {
+                RuneType t = RuneType.fromString(key);
+                String name = cs.getString(key);
+                if (t != null && name != null) crafters.put(t, name);
+            }
         }
     }
 
@@ -171,6 +220,9 @@ public class RuneManager {
         List<String> list = new ArrayList<>();
         for (RuneType t : crafted) list.add(t.name());
         y.set("crafted", list);
+        for (Map.Entry<RuneType, String> e : crafters.entrySet()) {
+            y.set("crafters." + e.getKey().name(), e.getValue());
+        }
         try {
             plugin.getDataFolder().mkdirs();
             y.save(craftedFile);
