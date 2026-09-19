@@ -119,7 +119,7 @@ public class RuneListener implements Listener {
         RuneType t = manager.getRune(e.getRecipe().getResult());
         if (t == null || !manager.craftingLimited()) return;
         if (!manager.isCrafted(t)) {
-            manager.markCrafted(t);
+            manager.markCrafted(t, e.getWhoClicked().getName());
             Bukkit.broadcastMessage(ChatColor.GOLD + e.getWhoClicked().getName() + ChatColor.YELLOW
                     + " stworzyl " + ChatColor.GOLD + t.displayName + ChatColor.YELLOW + "! Nikt inny juz jej nie stworzy.");
             manager.broadcastSound(org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
