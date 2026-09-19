@@ -33,7 +33,7 @@ public class RuneManager {
 
     private final Map<RuneType, Material> materials = new EnumMap<>(RuneType.class);
     private final Map<UUID, Map<RuneType, Long>> cooldowns = new HashMap<>();
-    private final Map<UUID, RuneType> activeRune = new HashMap<>();
+    private final Map<UUID, Set<RuneType>> activeRunes = new HashMap<>();
     private final Map<UUID, Long> frozen = new HashMap<>();
     private final Set<UUID> noFall = new HashSet<>();
     private final Map<UUID, UUID> lastHit = new HashMap<>();
