@@ -122,6 +122,7 @@ public class RuneListener implements Listener {
             manager.markCrafted(t);
             Bukkit.broadcastMessage(ChatColor.GOLD + e.getWhoClicked().getName() + ChatColor.YELLOW
                     + " stworzyl " + ChatColor.GOLD + t.displayName + ChatColor.YELLOW + "! Nikt inny juz jej nie stworzy.");
+            manager.broadcastSound(org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
         }
     }
 
